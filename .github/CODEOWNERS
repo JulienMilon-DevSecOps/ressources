@@ -1,0 +1,23 @@
+# 🧑‍⚖️ CODEOWNERS
+
+# Par défaut, tout le repository est validé par le propriétaire
+
+* @JulienMilon-DevSecOps
+
+# --- Zones spécifiques (optionnel, pour évoluer plus tard) ---
+
+# Documentation
+
+/docs/ @JulienMilon-DevSecOps
+
+# Templates
+
+/templates/ @JulienMilon-DevSecOps
+
+# GitHub configuration
+
+/.github/ @JulienMilon-DevSecOps
+
+# Examples
+
+/examples/ @JulienMilon-DevSecOps
