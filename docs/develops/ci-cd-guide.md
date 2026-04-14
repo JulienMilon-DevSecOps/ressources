@@ -111,7 +111,7 @@ Dans ce projet, le choix est le suivant :
 
 * **CI** → déclenchée sur Pull Request
 * **CD** → déclenchée via **tags semVer Git**
-* **ontinuous Deployment** → déclenchée via **tags spécifique Git**
+* **Continuous Deployment** → déclenchée via **tags spécifique Git**
 
 Exemple :
 
@@ -138,11 +138,12 @@ git push origin v1.0.0
 
 ---
 
-### 🚀 CD (Release via tag)
+### 🚀 CD Globale (Release via tag)
 
 1. Build production
 2. Tests finaux
 3. Packaging (Docker, artefacts)
+
 4. Déploiement
 
 ---
