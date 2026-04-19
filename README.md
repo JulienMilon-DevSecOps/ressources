@@ -51,6 +51,15 @@ CONTRIBUTING.md
 - Git Workflow
 - Best practices frontend/backend
 
+## 🧩 Templates disponibles
+
+Ce repository propose des templates réutilisables :
+
+- Issues → `/templates/issues`
+- README → `/templates/readme`
+
+👉 Copiez-les dans vos projets pour les utiliser.
+
 ## 🤝 Contribution
 
 Voir `CONTRIBUTING.md`
