@@ -3,7 +3,7 @@
 ## 📌 Introduction
 
 Ce document propose un **exemple de mise en place d’un pipeline CI/CD** applicable à la majorité des projets modernes.
-Il a pour objectif de servir de base et peut être adapté selon le contexte technique (stack, infrastructure, organisation). L'example proposé est évidement basée sur GitHub Actions, GitLab à un fonctionnement différent (je propose un autre exemple dans cet autre projet GitLab que je maintien [lien](url))
+Il a pour objectif de servir de base et peut être adapté selon le contexte technique (stack, infrastructure, organisation). Les exemples sont donnés pour GitHub Actions, avec leur équivalent GitLab CI. Une pipeline GitHub Actions complète, centralisée et réutilisable est disponible dans [pipeline-python-centralisee-portfolio](https://github.com/JulienMilon-DevSecOps/pipeline-python-centralisee-portfolio).
 
 ---
 
@@ -115,7 +115,7 @@ Dans ce projet, le choix est le suivant :
 
 Exemple :
 
-```bash id="x0rsxp"
+```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
@@ -152,7 +152,7 @@ git push origin v1.0.0
 
 Utilisation du **Semantic Versioning** :
 
-```id="u8sdtq"
+```text
 vMAJOR.MINOR.PATCH
 ```
 
@@ -162,7 +162,7 @@ vMAJOR.MINOR.PATCH
 
 * GitHub Actions
 * Docker
-* Registry (Docker Hub / GHCR)
+* Registry (GHCR / Docker Hub)
 
 ---
 
@@ -203,16 +203,123 @@ vMAJOR.MINOR.PATCH
 
 ## 🚀 Exemple GitHub Actions
 
-```yaml id="fp7exk"
+Sur GitHub, chaque workflow est un fichier `.github/workflows/*.yml`. CI sur
+chaque pull request, CD sur tag de version :
+
+```yaml
 name: CI
 
 on:
-  pull_request:
+  pull_request:          # CI sur pull request
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]     # CD sur tag
+
+permissions:
+  contents: read         # droits du GITHUB_TOKEN au plus juste
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - run: echo "Run tests"
+
+  build:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Build release ${{ github.ref_name }}"
 ```
+
+En production, épingler les actions tierces par **SHA** de commit plutôt que par
+tag (`uses: actions/checkout@<sha> # v4`) : un tag peut être déplacé, pas un SHA.
+
+---
+
+## ♻️ Mutualiser la pipeline : workflows réutilisables
+
+Plutôt que de copier ce fichier dans chaque dépôt, les jobs sont écrits **une
+fois** dans un dépôt dédié, sous forme de workflow réutilisable
+(`on: workflow_call` avec des `inputs` typés). Chaque projet l'appelle à une
+**version épinglée** :
+
+```yaml
+# .github/workflows/ci.yml d'un projet consommateur
+on:
+  push:
+    branches: ["**"]
+    tags: ["V-*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  pipeline:
+    uses: my-org/pipeline-python-factory/.github/workflows/python-docker.example.yml@1.0.0
+    with:
+      python_version: "3.13"
+      pytest_cov_source: app
+    secrets: inherit
+```
+
+Une nouvelle version de la pipeline ne change rien chez le consommateur tant
+que le numéro n'est pas modifié, par une pull request testée comme le reste.
+Exemple complet (brique commune, job `rules`, scan, publication, déploiement
+illustratif) : [pipeline-python-centralisee-portfolio](https://github.com/JulienMilon-DevSecOps/pipeline-python-centralisee-portfolio).
+
+---
+
+## 🦊 Équivalent GitLab CI
+
+Sur GitLab, la pipeline est décrite dans un fichier `.gitlab-ci.yml` à la racine du dépôt,
+et une **merge request** joue le rôle de la pull request.
+
+```yaml
+stages:
+  - test
+  - build
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"   # CI sur merge request
+    - if: $CI_COMMIT_TAG                                  # CD sur tag
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - echo "Run tests"
+
+build:
+  stage: build
+  image: python:3.12-slim
+  script:
+    - echo "Build release $CI_COMMIT_TAG"
+  rules:
+    - if: $CI_COMMIT_TAG
+```
+
+### 🔄 Correspondance GitHub Actions / GitLab CI
+
+| GitHub Actions | GitLab CI |
+|----------------|-----------|
+| `.github/workflows/*.yml` | `.gitlab-ci.yml` |
+| `on: pull_request` | `rules: - if: $CI_PIPELINE_SOURCE == "merge_request_event"` |
+| `on: push: tags` | `rules: - if: $CI_COMMIT_TAG` |
+| `jobs.<id>.needs` | `needs` |
+| `runs-on` | `tags` (choix du runner) + `image` |
+| `actions/checkout` | automatique (clone du dépôt) |
+| `uses:` (workflow réutilisable, `workflow_call`) | `include` / CI/CD components |
+| `secrets.MON_SECRET` | variables CI/CD masquées et protégées |
+| `environment` (+ *Required reviewers*) | `environment` (+ `when: manual`) |
+| `concurrency` | `resource_group` |
+| `actions/upload-artifact` | `artifacts` |
+| `actions/cache` | `cache` |

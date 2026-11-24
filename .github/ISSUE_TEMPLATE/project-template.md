@@ -1,3 +1,10 @@
+---
+name: "✨ Fonctionnalité / évolution"
+about: Proposer un nouveau guide, template ou une amélioration du dépôt
+title: ""
+labels: enhancement
+---
+
 ## 📌 Contexte
 Pourquoi cette fonctionnalité est nécessaire ?
 
